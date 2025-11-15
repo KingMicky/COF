@@ -41,7 +41,6 @@ A comprehensive, production-ready solution for automated cloud cost analysis, ri
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [API Reference](#api-reference)
-- [Contributing](#contributing)
 - [License](#license)
 
 ## 🚀 Quick Start
