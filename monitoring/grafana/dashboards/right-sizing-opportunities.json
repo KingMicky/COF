@@ -1,0 +1,98 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Cost Optimization - Right-Sizing Opportunities",
+    "tags": ["cost-optimization", "right-sizing", "finops"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Underutilized EC2 Instances",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "aws_ec2_cpu_utilization_average < 20",
+            "legendFormat": "{{instance_id}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Underutilized Azure VMs",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "azure_vm_cpu_utilization_average < 20",
+            "legendFormat": "{{vm_name}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Over-provisioned Resources",
+        "type": "bargauge",
+        "targets": [
+          {
+            "expr": "aws_ec2_cpu_utilization_max > 80",
+            "legendFormat": "AWS EC2 High CPU"
+          },
+          {
+            "expr": "azure_vm_cpu_utilization_max > 80",
+            "legendFormat": "Azure VM High CPU"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Potential Monthly Savings",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(aws_rightsizing_savings_estimate) + sum(azure_rightsizing_savings_estimate)",
+            "legendFormat": "Estimated Savings"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Right-Sizing Recommendations",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "aws_rightsizing_recommendations",
+            "legendFormat": "{{instance_id}} -> {{recommended_type}}"
+          },
+          {
+            "expr": "azure_rightsizing_recommendations",
+            "legendFormat": "{{vm_name}} -> {{recommended_sku}}"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-7d",
+      "to": "now"
+    },
+    "refresh": "1h"
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Cost Optimization - Cost Trends",
+    "tags": ["cost-optimization", "finops"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Total AWS Cost by Service (Last 30 Days)",
+        "type": "bargauge",
+        "targets": [
+          {
+            "expr": "sum(aws_cost_total) by (service)",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Total Azure Cost by Service (Last 30 Days)",
+        "type": "bargauge",
+        "targets": [
+          {
+            "expr": "sum(azure_cost_total) by (service)",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "AWS Budget vs Actual",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "aws_budget_limit / aws_budget_spent",
+            "legendFormat": "{{budget_name}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Azure Budget vs Actual",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "azure_budget_limit / azure_budget_spent",
+            "legendFormat": "{{budget_name}}"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Resource Counts",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(aws_resource_count) + sum(azure_resource_count)",
+            "legendFormat": "Total Resources"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-30d",
+      "to": "now"
+    },
+    "refresh": "5m"
+  }
+}

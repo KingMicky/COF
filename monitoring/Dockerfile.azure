@@ -1,0 +1,11 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+COPY azure_cost_exporter.py requirements-azure.txt ./
+
+RUN pip install --no-cache-dir -r requirements-azure.txt
+
+EXPOSE 8080
+
+CMD ["python", "azure_cost_exporter.py"]

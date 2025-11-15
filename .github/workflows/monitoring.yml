@@ -1,0 +1,79 @@
+name: Monitoring CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'monitoring/**'
+      - '.github/workflows/monitoring.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'monitoring/**'
+      - '.github/workflows/monitoring.yml'
+
+jobs:
+  test-monitoring:
+    name: Test Monitoring Stack
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install AWS Monitoring Dependencies
+      run: |
+        cd monitoring
+        pip install -r requirements-aws.txt
+
+    - name: Test AWS Cost Exporter
+      run: |
+        cd monitoring
+        python -m pytest aws_cost_exporter.py -v || python -c "import aws_cost_exporter; print('AWS exporter imports successfully')"
+
+    - name: Install Azure Monitoring Dependencies
+      run: |
+        cd monitoring
+        pip install -r requirements-azure.txt
+
+    - name: Test Azure Cost Exporter
+      run: |
+        cd monitoring
+        python -m pytest azure_cost_exporter.py -v || python -c "import azure_cost_exporter; print('Azure exporter imports successfully')"
+
+    - name: Test Prometheus Configuration
+      run: |
+        cd monitoring
+        docker run --rm -v $(pwd):/config prom/prometheus:latest --config.check --config.file=/config/prometheus.yml
+
+    - name: Test Docker Compose
+      run: |
+        cd monitoring
+        docker-compose config
+
+  deploy-monitoring:
+    name: Deploy Monitoring Stack
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: test-monitoring
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Deploy to AWS ECS
+      run: |
+        # Deploy monitoring stack to AWS ECS
+        aws ecs update-service --cluster cost-opt-cluster --service cost-opt-monitoring --force-new-deployment

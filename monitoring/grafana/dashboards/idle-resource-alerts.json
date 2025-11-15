@@ -1,0 +1,108 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Cost Optimization - Idle Resource Alerts",
+    "tags": ["cost-optimization", "idle-resources", "alerts", "finops"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Idle EC2 Instances (CPU < 5% for 7+ days)",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "aws_ec2_idle_instances",
+            "legendFormat": "{{instance_id}} - {{days_idle}} days"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Idle Azure VMs (CPU < 5% for 7+ days)",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "azure_vm_idle_instances",
+            "legendFormat": "{{vm_name}} - {{days_idle}} days"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Unattached EBS Volumes",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "aws_ebs_unattached_volumes",
+            "legendFormat": "Unattached Volumes"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Unattached Azure Disks",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "azure_unattached_disks",
+            "legendFormat": "Unattached Disks"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Unused Snapshots (30+ days old)",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "aws_unused_snapshots + azure_unused_snapshots",
+            "legendFormat": "{{snapshot_id}} - {{age_days}} days"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Auto-Shutdown Events",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "aws_autoshutdown_events + azure_autoshutdown_events",
+            "legendFormat": "{{resource_id}} - {{timestamp}}"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Cleanup Events",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "aws_cleanup_events + azure_cleanup_events",
+            "legendFormat": "{{resource_type}} - {{count}} items cleaned"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Estimated Monthly Savings from Idle Resources",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(aws_idle_savings_estimate) + sum(azure_idle_savings_estimate)",
+            "legendFormat": "Monthly Savings"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        }
+      }
+    ],
+    "time": {
+      "from": "now-7d",
+      "to": "now"
+    },
+    "refresh": "5m"
+  }
+}

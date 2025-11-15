@@ -1,0 +1,41 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "rules.yml"
+
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # AWS Cost Exporter
+  - job_name: 'aws-cost-exporter'
+    static_configs:
+      - targets: ['aws-cost-exporter:8080']
+    scrape_interval: 300s  # 5 minutes
+
+  # Azure Cost Exporter
+  - job_name: 'azure-cost-exporter'
+    static_configs:
+      - targets: ['azure-cost-exporter:8080']
+    scrape_interval: 300s  # 5 minutes
+
+  # Resource Utilization Exporters
+  - job_name: 'aws-resource-exporter'
+    static_configs:
+      - targets: ['aws-resource-exporter:8080']
+    scrape_interval: 60s   # 1 minute
+
+  - job_name: 'azure-resource-exporter'
+    static_configs:
+      - targets: ['azure-resource-exporter:8080']
+    scrape_interval: 60s   # 1 minute
+
+  # Cost Optimization Framework API
+  - job_name: 'cost-opt-api'
+    static_configs:
+      - targets: ['cost-opt-api:8000']
+    scrape_interval: 30s

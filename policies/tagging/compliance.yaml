@@ -1,0 +1,113 @@
+# Cost Optimization Framework - Tagging Compliance Policy
+
+apiVersion: v1
+kind: TaggingPolicy
+metadata:
+  name: cost-optimization-tagging
+  description: "Enforce consistent tagging for cost tracking and optimization"
+
+spec:
+  # Required tags for all resources
+  requiredTags:
+    - name: Owner
+      description: "Person or team responsible for the resource"
+      type: string
+      validation:
+        pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+        errorMessage: "Owner must be a valid email address"
+
+    - name: Environment
+      description: "Deployment environment (prod, dev, test, staging)"
+      type: string
+      allowedValues: ["prod", "dev", "test", "staging"]
+      defaultValue: "dev"
+
+    - name: CostCenter
+      description: "Cost center or department code"
+      type: string
+      validation:
+        pattern: "^[A-Z]{2,4}-[0-9]{3,6}$"
+        errorMessage: "CostCenter must be in format DEPT-123"
+
+    - name: Project
+      description: "Project or application name"
+      type: string
+      validation:
+        maxLength: 50
+
+  # Conditional tags based on resource type
+  conditionalTags:
+    - resourceType: "Compute"
+      tags:
+        - name: AutoShutdown
+          description: "Enable automatic shutdown for non-production resources"
+          type: boolean
+          defaultValue: true
+          conditions:
+            - tag: Environment
+              operator: notEquals
+              value: prod
+
+    - resourceType: "Database"
+      tags:
+        - name: BackupRetention
+          description: "Number of days to retain backups"
+          type: integer
+          defaultValue: 30
+          validation:
+            min: 7
+            max: 365
+
+    - resourceType: "Storage"
+      tags:
+        - name: DataClassification
+          description: "Data sensitivity level"
+          type: string
+          allowedValues: ["public", "internal", "confidential", "restricted"]
+          defaultValue: "internal"
+
+  # Tag inheritance rules
+  inheritance:
+    enabled: true
+    rules:
+      - fromResourceGroup: true
+      - fromSubscription: false
+
+  # Enforcement settings
+  enforcement:
+    mode: "audit"  # Can be "audit", "deny", or "remediate"
+    scope:
+      subscriptions:
+        - "*"  # Apply to all subscriptions
+      resourceGroups:
+        - "*"  # Apply to all resource groups
+      excludeResourceGroups:
+        - "infrastructure-rg"  # Exclude infrastructure resource group
+
+    # Remediation settings (when mode is "remediate")
+    remediation:
+      addMissingTags: true
+      updateInvalidTags: false
+      notifyOwner: true
+      notificationTemplate: |
+        Resource {{resourceName}} is missing required tags.
+        Please add the following tags:
+        - Owner: your-email@company.com
+        - Environment: prod/dev/test
+        - CostCenter: DEPT-123
+        - Project: project-name
+
+  # Compliance reporting
+  reporting:
+    enabled: true
+    frequency: "daily"
+    recipients:
+      - compliance@company.com
+      - finops@company.com
+    reportFormat: "csv"
+
+  # Exceptions
+  exceptions:
+    - resourceId: "/subscriptions/*/resourceGroups/infrastructure-rg/providers/Microsoft.Compute/virtualMachines/jumpbox"
+      reason: "Infrastructure jumpbox - permanent resource"
+      expires: "2025-12-31"

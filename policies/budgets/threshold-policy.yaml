@@ -1,0 +1,170 @@
+# Cost Optimization Framework - Budget Threshold Policy
+
+apiVersion: v1
+kind: BudgetPolicy
+metadata:
+  name: cost-threshold-alerts
+  description: "Monitor and alert on budget thresholds to prevent cost overruns"
+  terms:
+    version: "1.0"
+    effective: "2024-01-01"
+    owner: "FinOps Team"
+
+spec:
+  # Budget definitions
+  budgets:
+    - name: "monthly-infrastructure-budget"
+      amount: 50000
+      currency: "USD"
+      period: "monthly"
+      scope:
+        subscriptions: ["*"]
+        resourceGroups: ["*"]
+        excludeResourceGroups: ["sandbox-rg"]
+
+    - name: "quarterly-project-budget"
+      amount: 150000
+      currency: "USD"
+      period: "quarterly"
+      scope:
+        tags:
+          - key: "Project"
+            value: "cost-opt-demo"
+
+  # Alert thresholds
+  thresholds:
+    - percentage: 50
+      actions:
+        - type: "notification"
+          channels: ["email", "slack"]
+          recipients: ["finops@company.com", "engineering-leads@company.com"]
+          template: |
+            Budget Alert: {{budgetName}} is at {{percentage}}% utilization
+            Current spend: ${{currentAmount}}
+            Budget limit: ${{budgetAmount}}
+            Remaining: ${{remainingAmount}}
+
+    - percentage: 75
+      actions:
+        - type: "notification"
+          channels: ["email", "slack", "teams"]
+          recipients: ["cfo@company.com", "finops@company.com"]
+          priority: "high"
+          template: |
+            🚨 CRITICAL: Budget Alert - {{budgetName}} at {{percentage}}%
+            Current spend: ${{currentAmount}}
+            Budget limit: ${{budgetAmount}}
+            Remaining: ${{remainingAmount}}
+
+            Immediate action required to prevent overrun.
+
+    - percentage: 90
+      actions:
+        - type: "shutdown"
+          resources:
+            environments: ["dev", "test", "staging"]
+          gracePeriod: "24h"
+        - type: "notification"
+          channels: ["email", "slack", "teams", "sms"]
+          recipients: ["ceo@company.com", "cfo@company.com", "finops@company.com"]
+          priority: "critical"
+          template: |
+            🚨 EMERGENCY: Budget Critical - {{budgetName}} at {{percentage}}%
+            Current spend: ${{currentAmount}}
+            Budget limit: ${{budgetAmount}}
+            Remaining: ${{remainingAmount}}
+
+            Auto-shutdown initiated for non-production resources.
+
+    - percentage: 100
+      actions:
+        - type: "shutdown"
+          resources:
+            environments: ["dev", "test", "staging", "prod"]
+          immediate: true
+        - type: "notification"
+          channels: ["email", "slack", "teams", "sms", "phone"]
+          recipients: ["ceo@company.com", "cfo@company.com", "finops@company.com", "engineering@company.com"]
+          priority: "emergency"
+          template: |
+            🚨🚨 EMERGENCY: BUDGET EXCEEDED - {{budgetName}}
+            Current spend: ${{currentAmount}}
+            Budget limit: ${{budgetAmount}}
+            Overrun: ${{overrunAmount}}
+
+            All non-critical resources shut down. Immediate review required.
+
+  # Cost anomaly detection
+  anomalyDetection:
+    enabled: true
+    sensitivity: "medium"  # low, medium, high
+    lookbackPeriod: "30d"
+    alertThreshold: 50  # Percentage increase from baseline
+
+    actions:
+      - type: "notification"
+        channels: ["email", "slack"]
+        recipients: ["finops@company.com"]
+        template: |
+          Cost Anomaly Detected
+          Service: {{serviceName}}
+          Expected cost: ${{expectedAmount}}
+          Actual cost: ${{actualAmount}}
+          Variance: {{variancePercentage}}%
+
+  # Forecasting
+  forecasting:
+    enabled: true
+    predictionHorizon: "30d"
+    confidenceLevel: 0.95
+
+    alerts:
+      - threshold: 95  # 95% confidence of exceeding budget
+        actions:
+          - type: "notification"
+            channels: ["email", "slack"]
+            recipients: ["finops@company.com", "project-managers@company.com"]
+            template: |
+              Budget Forecast Alert
+              {{budgetName}} has {{confidence}}% chance of exceeding budget in {{days}} days
+              Projected spend: ${{projectedAmount}}
+              Budget limit: ${{budgetAmount}}
+
+  # Cost allocation and chargeback
+  chargeback:
+    enabled: true
+    frequency: "monthly"
+    format: "csv"
+    include:
+      - resourceCosts: true
+      - tagBreakdown: true
+      - ownerAttribution: true
+
+    distribution:
+      - recipients: ["finance@company.com"]
+        format: "detailed"
+      - recipients: ["engineering-leads@company.com"]
+        format: "summary"
+        groupBy: "team"
+
+  # Policy enforcement
+  enforcement:
+    mode: "audit"  # audit, warn, enforce
+    scope:
+      subscriptions: ["*"]
+      excludeSubscriptions: ["management-subscription"]
+
+  # Reporting
+  reporting:
+    enabled: true
+    frequency: "weekly"
+    format: "pdf"
+    include:
+      - budgetUtilization: true
+      - costTrends: true
+      - recommendations: true
+      - anomalies: true
+
+    recipients:
+      - "executives@company.com"
+      - "finops@company.com"

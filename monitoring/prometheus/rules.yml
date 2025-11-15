@@ -1,0 +1,74 @@
+groups:
+  - name: cost_optimization_alerts
+    rules:
+      # High Cost Alert
+      - alert: HighCloudCost
+        expr: sum(rate(aws_cost_total[1h])) > 1000 OR sum(rate(azure_cost_total[1h])) > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High cloud costs detected"
+          description: "Cloud costs have exceeded $1000/hour for the last 5 minutes"
+
+      # Idle Resource Alert
+      - alert: IdleEC2Instances
+        expr: aws_ec2_cpu_utilization < 5
+        for: 1h
+        labels:
+          severity: info
+        annotations:
+          summary: "Idle EC2 instances detected"
+          description: "EC2 instances with CPU utilization below 5% for over 1 hour"
+
+      # Budget Threshold Alert
+      - alert: BudgetThresholdExceeded
+        expr: (aws_cost_total / aws_budget_amount) > 0.8 OR (azure_cost_total / azure_budget_amount) > 0.8
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Budget threshold exceeded"
+          description: "Cloud spending has exceeded 80% of the allocated budget"
+
+      # Right-sizing Opportunity
+      - alert: RightSizingOpportunity
+        expr: aws_ec2_cpu_utilization > 80 OR azure_vm_cpu_utilization > 80
+        for: 30m
+        labels:
+          severity: info
+        annotations:
+          summary: "Right-sizing opportunity detected"
+          description: "Resources with high utilization may benefit from upscaling"
+
+      # Cost Anomaly Alert
+      - alert: CostAnomalyDetected
+        expr: abs(aws_cost_total - predict_linear(aws_cost_total[7d], 86400)) > 500
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cost anomaly detected"
+          description: "Unexpected cost increase compared to 7-day trend"
+
+  - name: resource_utilization_alerts
+    rules:
+      # Low Utilization Alert
+      - alert: LowResourceUtilization
+        expr: aws_ec2_cpu_utilization < 10 AND aws_ec2_memory_utilization < 10
+        for: 2h
+        labels:
+          severity: info
+        annotations:
+          summary: "Low resource utilization"
+          description: "Resources with consistently low utilization may be candidates for shutdown or downscaling"
+
+      # Storage Cost Alert
+      - alert: HighStorageCosts
+        expr: rate(aws_s3_cost_total[1h]) > 100 OR rate(azure_storage_cost_total[1h]) > 100
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "High storage costs detected"
+          description: "Storage costs exceeding $100/hour"

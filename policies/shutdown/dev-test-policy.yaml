@@ -1,0 +1,117 @@
+# Cost Optimization Framework - Auto-Shutdown Policy for Dev/Test Environments
+
+apiVersion: v1
+kind: ShutdownPolicy
+metadata:
+  name: dev-test-auto-shutdown
+  description: "Automatically shutdown resources in development and test environments"
+
+spec:
+  # Target environments
+  environments:
+    - dev
+    - test
+    - staging
+
+  # Schedule configuration
+  schedule:
+    timezone: "UTC"
+    weekdays:
+      enabled: true
+      shutdownTime: "18:00"  # 6 PM UTC
+      startupTime: "06:00"   # 6 AM UTC
+    weekends:
+      enabled: true
+      shutdownTime: "18:00"  # 6 PM UTC
+      startupTime: "09:00"   # 9 AM UTC
+
+  # Resource types to target
+  resourceTypes:
+    - virtualMachines
+    - virtualMachineScaleSets
+    - databases
+    - appServices
+
+  # Exclusion rules
+  exclusions:
+    # Exclude resources with specific tags
+    tags:
+      - key: "AutoShutdown"
+        value: "false"
+      - key: "Critical"
+        value: "true"
+      - key: "Environment"
+        value: "prod"  # Safety check
+
+    # Exclude specific resource names (regex patterns)
+    resourceNames:
+      - "^jumpbox.*"
+      - "^bastion.*"
+      - ".*-permanent$"
+
+    # Exclude resources in specific resource groups
+    resourceGroups:
+      - "infrastructure-rg"
+      - "shared-services-rg"
+
+  # Pre-shutdown actions
+  preShutdown:
+    enabled: true
+    actions:
+      - type: "notification"
+        template: "Resource {{resourceName}} will be shut down in 30 minutes due to auto-shutdown policy"
+        channels: ["email", "slack"]
+      - type: "backup"
+        enabled: true
+        resources: ["databases"]
+
+  # Post-shutdown actions
+  postShutdown:
+    enabled: true
+    actions:
+      - type: "log"
+        message: "Successfully shut down {{resourceName}}"
+      - type: "tag"
+        key: "LastShutdown"
+        value: "{{timestamp}}"
+
+  # Grace period and warnings
+  gracePeriod:
+    enabled: true
+    duration: "30m"  # 30 minutes
+    warningIntervals: ["15m", "5m"]
+
+  # Monitoring and alerting
+  monitoring:
+    enabled: true
+    metrics:
+      - name: "shutdown_events_total"
+        type: "counter"
+        labels: ["environment", "resource_type"]
+      - name: "shutdown_failures_total"
+        type: "counter"
+        labels: ["environment", "resource_type", "reason"]
+
+  # Cost savings tracking
+  costTracking:
+    enabled: true
+    currency: "USD"
+    reportFrequency: "daily"
+
+  # Emergency override
+  emergencyOverride:
+    enabled: true
+    tag: "EmergencyOverride"
+    duration: "24h"  # 24 hours
+    approvalRequired: true
+    approvers:
+      - "admin@company.com"
+      - "devops@company.com"
+
+  # Compliance and auditing
+  compliance:
+    enabled: true
+    auditLogRetention: "90d"
+    reportRecipients:
+      - "compliance@company.com"
+      - "finops@company.com"
