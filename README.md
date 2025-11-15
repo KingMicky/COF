@@ -55,12 +55,8 @@ A comprehensive, production-ready solution for automated cloud cost analysis, ri
 ### One-Command Deployment
 ```bash
 # Clone and setup
-git clone https://github.com/your-org/cost-optimization-framework.git
+git clone https://github.com/kingmicky/COF.git
 cd cost-optimization-framework
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your cloud credentials
 
 # Deploy infrastructure
 make deploy
@@ -152,7 +148,7 @@ graph TB
 ### Option 1: Docker (Recommended)
 ```bash
 # Clone repository
-git clone https://github.com/your-org/cost-optimization-framework.git
+git clone https://github.com/kingmicky/COF.git
 cd cost-optimization-framework
 
 # Start all services
@@ -346,7 +342,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 ### Development Setup
 ```bash
 # Clone repository
-git clone https://github.com/your-org/cost-optimization-framework.git
+git clone https://github.com/kingmicky/COF.git
 cd cost-optimization-framework
 
 # Create virtual environment
@@ -423,11 +419,6 @@ pytest --cov=. --cov-report=html
 - **Discussions**: [GitHub Discussions](https://github.com/your-org/cost-optimization-framework/discussions)
 - **Professional Services**: Contact our team for implementation assistance
 
-### Community
-- **Slack**: Join our [FinOps Community](https://finops-community.slack.com)
-- **Meetups**: Local FinOps meetups and webinars
-- **Training**: Online courses and certifications
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -453,4 +444,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Ready to optimize your cloud costs?** Get started with the [Setup Guide](docs/setup_guide.md) or join our [community](https://github.com/your-org/cost-optimization-framework/discussions) to share your experiences!
+**Ready to optimize your cloud costs?** Get started with the [Setup Guide](docs/setup_guide.md)
