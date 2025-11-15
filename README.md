@@ -411,23 +411,9 @@ pytest --cov=. --cov-report=html
 - **ITSM Tools**: ServiceNow, Jira Service Management
 - **DevOps Tools**: Jenkins, GitLab CI, GitHub Actions
 
-## 📞 Support
-
-### Getting Help
-- **Documentation**: [Setup Guide](docs/setup_guide.md), [Usage Guide](docs/usage_guide.md)
-- **Issues**: [GitHub Issues](https://github.com/your-org/cost-optimization-framework/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/cost-optimization-framework/discussions)
-- **Professional Services**: Contact our team for implementation assistance
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **FinOps Foundation**: For establishing FinOps principles and best practices
-- **Cloud Provider Communities**: For documentation and support
-- **Open Source Contributors**: For tools and libraries that make this possible
 
 ## 📊 Project Status
 
