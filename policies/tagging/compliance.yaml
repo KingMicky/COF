@@ -1,4 +1,4 @@
-# Cost Optimization Framework - Tagging Compliance Policy
+
 
 apiVersion: v1
 kind: TaggingPolicy
@@ -7,7 +7,7 @@ metadata:
   description: "Enforce consistent tagging for cost tracking and optimization"
 
 spec:
-  # Required tags for all resources
+  
   requiredTags:
     - name: Owner
       description: "Person or team responsible for the resource"
@@ -35,7 +35,7 @@ spec:
       validation:
         maxLength: 50
 
-  # Conditional tags based on resource type
+  
   conditionalTags:
     - resourceType: "Compute"
       tags:
@@ -66,25 +66,25 @@ spec:
           allowedValues: ["public", "internal", "confidential", "restricted"]
           defaultValue: "internal"
 
-  # Tag inheritance rules
+  
   inheritance:
     enabled: true
     rules:
       - fromResourceGroup: true
       - fromSubscription: false
 
-  # Enforcement settings
+  
   enforcement:
-    mode: "audit"  # Can be "audit", "deny", or "remediate"
+    mode: "audit"  
     scope:
       subscriptions:
-        - "*"  # Apply to all subscriptions
+        - "*"  
       resourceGroups:
-        - "*"  # Apply to all resource groups
+        - "*"  
       excludeResourceGroups:
-        - "infrastructure-rg"  # Exclude infrastructure resource group
+        - "infrastructure-rg"  
 
-    # Remediation settings (when mode is "remediate")
+    
     remediation:
       addMissingTags: true
       updateInvalidTags: false
@@ -97,7 +97,7 @@ spec:
         - CostCenter: DEPT-123
         - Project: project-name
 
-  # Compliance reporting
+  
   reporting:
     enabled: true
     frequency: "daily"
@@ -106,7 +106,7 @@ spec:
       - finops@company.com
     reportFormat: "csv"
 
-  # Exceptions
+  
   exceptions:
     - resourceId: "/subscriptions/*/resourceGroups/infrastructure-rg/providers/Microsoft.Compute/virtualMachines/jumpbox"
       reason: "Infrastructure jumpbox - permanent resource"

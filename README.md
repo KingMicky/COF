@@ -67,17 +67,21 @@ open http://localhost:8501
 
 ### Manual Setup
 ```bash
-# 1. Deploy infrastructure
+# 1. Install dependencies
+pip install -r monitoring/requirements-aws.txt
+pip install -r automation/aws-lambda/requirements.txt
+
+# 2. Deploy infrastructure
 cd terraform/aws  # or terraform/azure
 terraform init && terraform apply
 
-# 2. Deploy monitoring
-cd monitoring
+# 3. Deploy monitoring
+cd ../../monitoring
 docker-compose up -d
 
-# 3. Start dashboard
-cd dashboard
-streamlit run dashboard.py
+# 4. Start dashboard
+# Run from project root
+streamlit run monitoring/dashboard.py
 ```
 
 ## 🏗️ Architecture
@@ -145,48 +149,40 @@ graph TB
 
 ## 📦 Installation
 
-### Option 1: Docker (Recommended)
+### Option 1: Docker (Monitoring Stack)
 ```bash
 # Clone repository
 git clone https://github.com/kingmicky/COF.git
-cd cost-optimization-framework
+cd cost-optimization-framework/monitoring
 
-# Start all services
+# Start monitoring services
 docker-compose up -d
 
 # Access dashboard
-open http://localhost:8501
+# Grafana: http://localhost:3000
+# Streamlit: http://localhost:8501
 ```
 
 ### Option 2: Manual Installation
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+pip install -r monitoring/requirements-aws.txt
 
 # Deploy infrastructure
 cd terraform/aws && terraform apply
 cd terraform/azure && terraform apply
 
 # Start monitoring
-cd monitoring && docker-compose up -d
+cd ../../monitoring && docker-compose up -d
 
 # Deploy functions
-cd automation/aws-lambda && ./deploy.sh
-cd automation/azure-functions && ./deploy.sh
+# (Manual zip and upload recommended for now)
+cd ../automation/aws-lambda
+# zip -r function.zip .
+# aws lambda update-function-code --function-name AutoShutdown --zip-file fileb://function.zip
 ```
 
-### Option 3: Cloud-Native Deployment
-```bash
-# AWS deployment
-aws cloudformation deploy \
-    --template-file cloudformation/framework.yml \
-    --stack-name cost-opt-framework
 
-# Azure deployment
-az deployment group create \
-    --resource-group cost-opt-rg \
-    --template-file arm/framework.json
-```
 
 ## ⚙️ Configuration
 

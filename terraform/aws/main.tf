@@ -1,4 +1,4 @@
-# AWS Cost Optimization Framework Infrastructure
+
 
 terraform {
   required_providers {
@@ -14,6 +14,17 @@ terraform {
 provider "aws" {
   region = var.aws_region
 
+  endpoints {
+    ec2        = var.aws_endpoint_url
+    s3         = var.aws_endpoint_url
+    rds        = var.aws_endpoint_url
+    cloudwatch = var.aws_endpoint_url
+    iam        = var.aws_endpoint_url
+    sns        = var.aws_endpoint_url
+    sts        = var.aws_endpoint_url
+    kms        = var.aws_endpoint_url
+  }
+
   default_tags {
     tags = {
       Project     = "cost-optimization-framework"
@@ -23,7 +34,17 @@ provider "aws" {
   }
 }
 
-# Variables
+
+variable "aws_endpoint_url" {
+  description = "AWS Endpoint URL for LocalStack"
+  type        = string
+  default     = null
+}
+
+
+
+
+
 variable "aws_region" {
   description = "AWS region"
   type        = string
@@ -58,7 +79,8 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
-# Tagging Policy Enforcement
+
+# NOTE: This policy can only be applied to the master account of an AWS Organization.
 resource "aws_organizations_policy" "tagging_policy" {
   name        = "cost-optimization-tagging-policy"
   description = "Enforce cost optimization tagging"
@@ -86,15 +108,19 @@ resource "aws_organizations_policy" "tagging_policy" {
   })
 }
 
-# Compute Resources (EC2)
+
 module "compute" {
   source = "../modules/compute"
 
-  cloud_provider   = "aws"
-  instance_count   = 2
-  instance_type    = "t3.micro"
-  auto_shutdown    = true
-  shutdown_schedule = "0 18 * * 1-5"  # 6 PM weekdays
+  cloud_provider       = "aws"
+  instance_count       = 2
+  instance_type        = "t3.micro"
+  auto_shutdown        = true
+  shutdown_schedule    = "0 18 * * 1-5"
+  location             = var.aws_region
+  lambda_function_name = "cost-opt-auto-shutdown"
+  vpc_id               = var.vpc_id
+  subnet_ids           = var.subnet_ids
 
   tags = {
     Owner       = var.owner
@@ -103,7 +129,7 @@ module "compute" {
   }
 }
 
-# Storage Resources (S3)
+
 module "storage" {
   source = "../modules/storage"
 
@@ -125,19 +151,21 @@ resource "random_string" "bucket_suffix" {
   special = false
 }
 
-# Database Resources (RDS)
+
 module "database" {
   source = "../modules/database"
 
-  cloud_provider         = "aws"
-  db_name                = "costoptdb"
-  db_username            = "admin"
-  db_password            = var.db_password
-  db_instance_class      = "db.t3.micro"
-  db_engine              = "mysql"
-  db_allocated_storage   = 20
+  cloud_provider          = "aws"
+  db_name                 = "costoptdb"
+  db_username             = "admin"
+  db_password             = var.db_password
+  db_instance_class       = "db.t3.micro"
+  db_engine               = "mysql"
+  db_allocated_storage    = 20
   backup_retention_period = 7
-  auto_shutdown          = var.environment != "prod"
+  auto_shutdown           = var.environment != "prod"
+  db_subnet_group_name    = aws_db_subnet_group.database.name
+  vpc_id                  = var.vpc_id
 
   tags = {
     Owner       = var.owner
@@ -152,13 +180,24 @@ variable "db_password" {
   sensitive   = true
 }
 
-# Cost Allocation Tags (Note: These are configured in AWS Cost Allocation Tags console)
-# The following tags are activated for cost allocation:
-# - Owner
-# - Environment
-# - CostCenter
 
-# Budgets and Alerts
+
+
+
+
+
+
+resource "aws_db_subnet_group" "database" {
+  name       = "cost-opt-db-subnet-group"
+  subnet_ids = var.subnet_ids
+
+  tags = {
+    Name = "Cost Optimization DB Subnet Group"
+  }
+}
+
+
+
 resource "aws_budgets_budget" "monthly_budget" {
   name         = "cost-optimization-monthly-budget"
   budget_type  = "COST"
@@ -168,14 +207,14 @@ resource "aws_budgets_budget" "monthly_budget" {
 
   cost_filter {
     name   = "TagKeyValue"
-    values = ["Environment$prod"]
+    values = ["Environment$${var.environment}"]
   }
 
   notification {
     comparison_operator        = "GREATER_THAN"
     threshold                  = 80
-    threshold_type            = "PERCENTAGE"
-    notification_type         = "ACTUAL"
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
     subscriber_email_addresses = [var.alert_email]
   }
 }
@@ -185,9 +224,10 @@ variable "alert_email" {
   type        = string
 }
 
-# CloudWatch Alarms for Cost Optimization
+
 resource "aws_cloudwatch_metric_alarm" "high_cpu" {
-  alarm_name          = "cost-opt-high-cpu"
+  for_each            = toset(module.compute.aws_instance_ids)
+  alarm_name          = "cost-opt-high-cpu-${each.key}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "CPUUtilization"
@@ -199,15 +239,22 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu" {
   alarm_actions       = [aws_sns_topic.cost_alerts.arn]
 
   dimensions = {
-    InstanceId = module.compute.aws_instance_ids[0]
+    InstanceId = each.key
   }
 }
 
-resource "aws_sns_topic" "cost_alerts" {
-  name = "cost-optimization-alerts"
+resource "aws_kms_key" "sns" {
+  description             = "KMS key for SNS alerts"
+  deletion_window_in_days = 10
+  enable_key_rotation     = true
 }
 
-# Outputs
+resource "aws_sns_topic" "cost_alerts" {
+  name              = "cost-optimization-alerts"
+  kms_master_key_id = aws_kms_key.sns.arn
+}
+
+
 output "compute_instance_ids" {
   description = "EC2 instance IDs"
   value       = module.compute.aws_instance_ids

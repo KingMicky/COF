@@ -1,4 +1,4 @@
-# Azure Cost Optimization Framework Infrastructure
+
 
 terraform {
   required_providers {
@@ -13,11 +13,18 @@ terraform {
 
 provider "azurerm" {
   features {}
+  subscription_id = var.subscription_id
+  tenant_id       = var.tenant_id
 }
 
-# Variables
+
 variable "subscription_id" {
   description = "Azure subscription ID"
+  type        = string
+}
+
+variable "tenant_id" {
+  description = "Azure tenant ID"
   type        = string
 }
 
@@ -69,7 +76,52 @@ variable "automation_account_name" {
   default     = "cost-opt-automation"
 }
 
-# Resource Group
+
+variable "key_vault_name" {
+  description = "Azure Key Vault name"
+  type        = string
+  default     = "cost-opt-kv"
+}
+
+variable "key_vault_object_id" {
+  description = "Object ID of the user or service principal that needs access to the Key Vault"
+  type        = string
+  default     = "00000000-0000-0000-0000-000000000000" # Replace with a valid object ID
+}
+
+resource "azurerm_key_vault" "cost_opt" {
+  name                = var.key_vault_name
+  location            = azurerm_resource_group.cost_opt.location
+  resource_group_name = azurerm_resource_group.cost_opt.name
+  tenant_id           = var.tenant_id
+  sku_name            = "standard"
+
+  access_policy {
+    tenant_id = var.tenant_id
+    object_id = var.key_vault_object_id
+
+    secret_permissions = [
+      "Get",
+      "List",
+      "Set",
+      "Delete",
+    ]
+  }
+
+  tags = {
+    Environment = var.environment
+    Owner       = var.owner
+    CostCenter  = var.cost_center
+    ManagedBy   = "cost-optimization-framework"
+  }
+}
+
+resource "azurerm_key_vault_secret" "db_password" {
+  name         = "db-password"
+  value        = var.db_password
+  key_vault_id = azurerm_key_vault.cost_opt.id
+}
+
 resource "azurerm_resource_group" "cost_opt" {
   name     = var.resource_group_name
   location = var.location
@@ -82,7 +134,7 @@ resource "azurerm_resource_group" "cost_opt" {
   }
 }
 
-# Virtual Network
+
 resource "azurerm_virtual_network" "cost_opt" {
   name                = var.vnet_name
   location            = azurerm_resource_group.cost_opt.location
@@ -97,7 +149,7 @@ resource "azurerm_virtual_network" "cost_opt" {
   }
 }
 
-# Subnet
+
 resource "azurerm_subnet" "cost_opt" {
   name                 = var.subnet_name
   resource_group_name  = azurerm_resource_group.cost_opt.name
@@ -105,7 +157,7 @@ resource "azurerm_subnet" "cost_opt" {
   address_prefixes     = ["10.0.1.0/24"]
 }
 
-# Tagging Policy (Azure Policy)
+
 resource "azurerm_policy_definition" "tagging_policy" {
   name         = "cost-optimization-tagging-policy"
   policy_type  = "Custom"
@@ -122,16 +174,16 @@ resource "azurerm_policy_definition" "tagging_policy" {
         {
           anyOf = [
             {
-              field     = "tags.Owner"
-              exists    = false
+              field  = "tags.Owner"
+              exists = false
             },
             {
-              field     = "tags.Environment"
-              exists    = false
+              field  = "tags.Environment"
+              exists = false
             },
             {
-              field     = "tags.CostCenter"
-              exists    = false
+              field  = "tags.CostCenter"
+              exists = false
             }
           ]
         }
@@ -149,19 +201,19 @@ resource "azurerm_subscription_policy_assignment" "tagging_policy" {
   subscription_id      = var.subscription_id
 }
 
-# Compute Resources (VM Scale Sets)
+
 module "compute" {
   source = "../modules/compute"
 
-  cloud_provider     = "azure"
-  instance_count     = 2
-  instance_type      = "Standard_B1s"
-  auto_shutdown      = true
-  shutdown_schedule  = "0 18 * * 1-5"  # 6 PM weekdays
+  cloud_provider    = "azure"
+  instance_count    = 2
+  instance_type     = "Standard_B1s"
+  auto_shutdown     = true
+  shutdown_schedule = "0 18 * * 1-5"
 
   resource_group_name     = azurerm_resource_group.cost_opt.name
-  location               = azurerm_resource_group.cost_opt.location
-  subnet_id              = azurerm_subnet.cost_opt.id
+  location                = azurerm_resource_group.cost_opt.location
+  subnet_id               = azurerm_subnet.cost_opt.id
   automation_account_name = var.automation_account_name
 
   tags = {
@@ -171,14 +223,14 @@ module "compute" {
   }
 }
 
-# Storage Resources (Blob Storage)
+
 module "storage" {
   source = "../modules/storage"
 
-  cloud_provider     = "azure"
-  bucket_name        = "costoptstorage${random_string.bucket_suffix.result}"
+  cloud_provider      = "azure"
+  bucket_name         = "costoptstorage${random_string.bucket_suffix.result}"
   resource_group_name = azurerm_resource_group.cost_opt.name
-  location           = azurerm_resource_group.cost_opt.location
+  location            = azurerm_resource_group.cost_opt.location
 
   tags = {
     Owner       = var.owner
@@ -195,20 +247,20 @@ resource "random_string" "bucket_suffix" {
   special = false
 }
 
-# Database Resources (Azure SQL)
+
 module "database" {
   source = "../modules/database"
 
-  cloud_provider     = "azure"
-  db_name            = "costoptdb"
-  db_username        = "adminuser"
-  db_password        = var.db_password
-  db_instance_class  = "Basic"
-  db_engine          = "sqlserver"
-  auto_shutdown      = var.environment != "prod"
+  cloud_provider        = "azure"
+  db_name               = "costoptdb"
+  db_username           = "adminuser"
+  db_password_secret_id = azurerm_key_vault_secret.db_password.id
+  db_instance_class     = "Basic"
+  db_engine             = "sqlserver"
+  auto_shutdown         = var.environment != "prod"
 
   resource_group_name = azurerm_resource_group.cost_opt.name
-  location           = azurerm_resource_group.cost_opt.location
+  location            = azurerm_resource_group.cost_opt.location
 
   tags = {
     Owner       = var.owner
@@ -223,7 +275,7 @@ variable "db_password" {
   sensitive   = true
 }
 
-# Cost Management Budget
+
 resource "azurerm_consumption_budget_resource_group" "monthly_budget" {
   name              = "cost-opt-monthly-budget"
   resource_group_id = azurerm_resource_group.cost_opt.id
@@ -231,13 +283,13 @@ resource "azurerm_consumption_budget_resource_group" "monthly_budget" {
   time_grain        = "Monthly"
 
   time_period {
-    start_date = "2024-01-01T00:00:00Z"
-    end_date   = "2024-12-31T23:59:59Z"
+    start_date = formatdate("YYYY-01-01T00:00:00Z", timestamp())
+    end_date   = formatdate("YYYY-12-31T23:59:59Z", timestamp())
   }
 
   notification {
     enabled        = true
-    threshold      = 80.0
+    threshold      = 80
     operator       = "EqualTo"
     contact_emails = [var.alert_email]
   }
@@ -248,7 +300,7 @@ variable "alert_email" {
   type        = string
 }
 
-# Azure Monitor Alerts for Cost Optimization
+
 resource "azurerm_monitor_metric_alert" "high_cpu" {
   name                = "cost-opt-high-cpu"
   resource_group_name = azurerm_resource_group.cost_opt.name
@@ -279,7 +331,7 @@ resource "azurerm_monitor_action_group" "cost_alerts" {
   }
 }
 
-# Outputs
+
 output "resource_group_name" {
   description = "Resource group name"
   value       = azurerm_resource_group.cost_opt.name

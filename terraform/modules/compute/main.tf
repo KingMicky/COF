@@ -1,4 +1,4 @@
-# Reusable Compute Module for AWS EC2 and Azure VM Scale Sets
+
 
 variable "cloud_provider" {
   description = "Cloud provider: aws or azure"
@@ -36,7 +36,7 @@ variable "auto_shutdown" {
 variable "shutdown_schedule" {
   description = "Cron schedule for auto-shutdown (UTC)"
   type        = string
-  default     = "0 18 * * 1-5"  # 6 PM weekdays
+  default     = "0 18 * * 1-5"
 }
 
 variable "resource_group_name" {
@@ -69,17 +69,46 @@ variable "lambda_function_name" {
   default     = ""
 }
 
-# AWS Resources
+
+variable "admin_password" {
+  description = "Azure VM admin password"
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "vpc_id" {
+  description = "VPC ID for AWS resources"
+  type        = string
+  default     = null
+}
+
+variable "subnet_ids" {
+  description = "Subnet IDs for AWS resources"
+  type        = list(string)
+  default     = null
+}
+
 resource "aws_instance" "compute" {
   count         = var.cloud_provider == "aws" ? var.instance_count : 0
-  ami           = data.aws_ami.amazon_linux.id
+  ami           = data.aws_ami.amazon_linux[0].id
   instance_type = var.instance_type
+  subnet_id     = var.subnet_ids[count.index % length(var.subnet_ids)]
 
   tags = merge(var.tags, {
     Name         = "cost-opt-compute-${count.index}"
     AutoShutdown = var.auto_shutdown ? "true" : "false"
     ManagedBy    = "cost-optimization-framework"
   })
+
+  metadata_options {
+    http_tokens   = "required"
+    http_endpoint = "enabled"
+  }
+
+  root_block_device {
+    encrypted = true
+  }
 
   lifecycle {
     ignore_changes = [
@@ -89,16 +118,17 @@ resource "aws_instance" "compute" {
 }
 
 data "aws_ami" "amazon_linux" {
+  count       = var.cloud_provider == "aws" ? 1 : 0
   most_recent = true
   owners      = ["amazon"]
 
   filter {
     name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+    values = ["amzn2-ami-hvm-2.0.*-x86_64-gp2"]
   }
 }
 
-# Auto-shutdown CloudWatch Event Rule for AWS
+
 resource "aws_cloudwatch_event_rule" "auto_shutdown" {
   count               = var.cloud_provider == "aws" && var.auto_shutdown ? 1 : 0
   name                = "auto-shutdown-compute"
@@ -117,7 +147,7 @@ resource "aws_cloudwatch_event_target" "auto_shutdown" {
   arn       = "arn:aws:lambda:${var.location}:${data.aws_caller_identity.current[0].account_id}:function:${var.lambda_function_name}"
 }
 
-# Azure Resources
+
 resource "azurerm_linux_virtual_machine_scale_set" "compute" {
   count               = var.cloud_provider == "azure" ? 1 : 0
   name                = "cost-opt-compute-vmss"
@@ -138,7 +168,9 @@ resource "azurerm_linux_virtual_machine_scale_set" "compute" {
     caching              = "ReadWrite"
   }
 
-  admin_username = "azureuser"
+  admin_username                  = "azureuser"
+  admin_password                  = var.admin_password
+  disable_password_authentication = false
 
   network_interface {
     name    = "cost-opt-nic"
@@ -157,7 +189,7 @@ resource "azurerm_linux_virtual_machine_scale_set" "compute" {
   })
 }
 
-# Azure Automation Account (required for schedules)
+
 resource "azurerm_automation_account" "cost_opt" {
   count               = var.cloud_provider == "azure" && var.auto_shutdown ? 1 : 0
   name                = var.automation_account_name
@@ -170,7 +202,7 @@ resource "azurerm_automation_account" "cost_opt" {
   }
 }
 
-# Azure Runbook for auto-shutdown (placeholder - would contain actual PowerShell script)
+
 resource "azurerm_automation_runbook" "auto_shutdown" {
   count                   = var.cloud_provider == "azure" && var.auto_shutdown ? 1 : 0
   name                    = "auto-shutdown-compute"
@@ -181,13 +213,23 @@ resource "azurerm_automation_runbook" "auto_shutdown" {
   log_progress            = "true"
   description             = "Auto-shutdown compute instances"
   runbook_type            = "PowerShell"
-
-  publish_content_link {
-    uri = "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/101-automation-runbook-getvms/runbooks/Get-VMs.ps1"
-  }
+  content                 = var.runbook_content
 }
 
-# Azure Automation Schedule for auto-shutdown
+variable "runbook_content" {
+  description = "Content of the Azure Automation runbook"
+  type        = string
+  default     = <<-EOF
+    param(
+      [string]$ResourceGroupName,
+      [string]$VmssName
+    )
+
+    Stop-AzVmss -ResourceGroupName $ResourceGroupName -VMScaleSetName $VmssName -Force
+    EOF
+}
+
+
 resource "azurerm_automation_schedule" "auto_shutdown" {
   count                   = var.cloud_provider == "azure" && var.auto_shutdown ? 1 : 0
   name                    = "auto-shutdown-compute"
@@ -196,11 +238,11 @@ resource "azurerm_automation_schedule" "auto_shutdown" {
   frequency               = "Week"
   interval                = 1
   timezone                = "UTC"
-  start_time              = "2024-01-01T18:00:00Z"
+  start_time              = formatdate("YYYY-MM-DD'T'hh:mm:ssZ", timestamp())
   description             = "Auto-shutdown compute instances on weekdays"
 }
 
-# Outputs
+
 output "aws_instance_ids" {
   description = "AWS instance IDs"
   value       = var.cloud_provider == "aws" ? aws_instance.compute[*].id : []

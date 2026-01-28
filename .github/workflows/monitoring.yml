@@ -75,5 +75,5 @@ jobs:
 
     - name: Deploy to AWS ECS
       run: |
-        # Deploy monitoring stack to AWS ECS
+        
         aws ecs update-service --cluster cost-opt-cluster --service cost-opt-monitoring --force-new-deployment

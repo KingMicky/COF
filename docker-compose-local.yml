@@ -1,0 +1,73 @@
+version: "3.8"
+
+services:
+  localstack:
+    container_name: localstack
+    image: localstack/localstack
+
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+    ports:
+      - "127.0.0.1:4577:4566"
+    environment:
+      - DEBUG=${DEBUG:-0}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - SERVICES=${SERVICES:-s3,lambda,dynamodb,iam,cloudformation,ec2,sts,sns,cloudwatch,rds,kms}
+      - EAGER_SERVICE_LOADING=0
+      - LAMBDA_EXECUTOR=docker-reuse
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - ci-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  jenkins:
+    container_name: jenkins_controller
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
+
+    deploy:
+      resources:
+        limits:
+          memory: 3072M
+    privileged: true
+    user: root
+    ports:
+      - "8088:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/var/local-repo:ro
+    environment:
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_REGION=us-east-1
+
+      - TF_PLUGIN_CLIENT_TIMEOUT=60000
+      - JAVA_OPTS=-Xmx2048m -Xms1024m -Djava.awt.headless=true
+    dns:
+      - 8.8.8.8
+    networks:
+      - ci-network
+    depends_on:
+      - localstack
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  jenkins_home:
+
+networks:
+  ci-network:
+    driver: bridge

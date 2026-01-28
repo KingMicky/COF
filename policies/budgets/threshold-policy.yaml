@@ -1,4 +1,4 @@
-# Cost Optimization Framework - Budget Threshold Policy
+
 
 apiVersion: v1
 kind: BudgetPolicy
@@ -11,7 +11,7 @@ metadata:
     owner: "FinOps Team"
 
 spec:
-  # Budget definitions
+  
   budgets:
     - name: "monthly-infrastructure-budget"
       amount: 50000
@@ -31,7 +31,7 @@ spec:
           - key: "Project"
             value: "cost-opt-demo"
 
-  # Alert thresholds
+  
   thresholds:
     - percentage: 50
       actions:
@@ -94,12 +94,12 @@ spec:
 
             All non-critical resources shut down. Immediate review required.
 
-  # Cost anomaly detection
+  
   anomalyDetection:
     enabled: true
-    sensitivity: "medium"  # low, medium, high
+    sensitivity: "medium"  
     lookbackPeriod: "30d"
-    alertThreshold: 50  # Percentage increase from baseline
+    alertThreshold: 50  
 
     actions:
       - type: "notification"
@@ -112,14 +112,14 @@ spec:
           Actual cost: ${{actualAmount}}
           Variance: {{variancePercentage}}%
 
-  # Forecasting
+  
   forecasting:
     enabled: true
     predictionHorizon: "30d"
     confidenceLevel: 0.95
 
     alerts:
-      - threshold: 95  # 95% confidence of exceeding budget
+      - threshold: 95  
         actions:
           - type: "notification"
             channels: ["email", "slack"]
@@ -130,7 +130,7 @@ spec:
               Projected spend: ${{projectedAmount}}
               Budget limit: ${{budgetAmount}}
 
-  # Cost allocation and chargeback
+  
   chargeback:
     enabled: true
     frequency: "monthly"
@@ -147,14 +147,14 @@ spec:
         format: "summary"
         groupBy: "team"
 
-  # Policy enforcement
+  
   enforcement:
-    mode: "audit"  # audit, warn, enforce
+    mode: "audit"  
     scope:
       subscriptions: ["*"]
       excludeSubscriptions: ["management-subscription"]
 
-  # Reporting
+  
   reporting:
     enabled: true
     frequency: "weekly"

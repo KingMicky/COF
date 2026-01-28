@@ -81,7 +81,7 @@ jobs:
     - name: Deploy Lambda Functions
       run: |
         cd automation/aws-lambda
-        # Package and deploy Lambda functions
+        
         for func in auto_shutdown right_sizing cleanup; do
           zip -r ${func}.zip ${func}.py
           aws lambda update-function-code --function-name cost-opt-${func} --zip-file fileb://${func}.zip

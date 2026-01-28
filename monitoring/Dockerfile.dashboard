@@ -1,0 +1,17 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+COPY requirements-dashboard.txt .
+RUN pip install --no-cache-dir -r requirements-dashboard.txt
+
+# Copy the current directory (monitoring/) into /app/monitoring
+# This allows the 'from monitoring.azure_client' import to work
+COPY . /app/monitoring/
+
+# Set PYTHONPATH to /app so 'monitoring' is treated as a module
+ENV PYTHONPATH=/app
+
+EXPOSE 8501
+
+CMD ["streamlit", "run", "monitoring/dashboard.py", "--server.address=0.0.0.0"]

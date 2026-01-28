@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   prometheus:
@@ -10,12 +10,12 @@ services:
       - ./prometheus/rules.yml:/etc/prometheus/rules.yml
       - prometheus_data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
     networks:
       - monitoring
 
@@ -26,8 +26,8 @@ services:
     volumes:
       - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
     command:
-      - '--config.file=/etc/alertmanager/alertmanager.yml'
-      - '--storage.path=/alertmanager'
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
     networks:
       - monitoring
 
@@ -81,6 +81,8 @@ services:
     environment:
       - AWS_REGION=us-east-1
       - AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID}
+    volumes:
+      - ./settings.json:/app/monitoring/settings.json
     networks:
       - monitoring
 

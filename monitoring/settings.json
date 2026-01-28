@@ -1,0 +1,10 @@
+{
+    "auto_refresh_interval": "Off",
+    "cpu_threshold": 80,
+    "memory_threshold": 80,
+    "cost_threshold": 20,
+    "email_notifications": true,
+    "slack_notifications": false,
+    "alert_email": "admin@example.com",
+    "slack_webhook": ""
+}
